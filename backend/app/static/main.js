@@ -12,7 +12,9 @@ $(function () {
     var drawing = false;
 
     $.getJSON('/token', function(tokenResponse) {
-        syncClient = new Twilio.Sync.Client(tokenResponse.token, { logLevel: 'info' });
+        console.log(tokenResponse.token);
+        syncClient = new Twilio.Sync.Client(tokenResponse.token);
+        
         syncClient.on('connectionStateChanged', function(state) {
             if (state != 'connected') {
                 message.html('Sync is not live (websocket connection <span style="color: red">' + state + '</span>)…');
@@ -23,13 +25,33 @@ $(function () {
 
         // create the stream object
         syncClient.stream('drawingData').then(function(stream) {
+            console.log('stream created');
             syncStream = stream;
             // listen update and sync drawing data
             syncStream.on('messagePublished', function(event) {
-                // console.log(event.message.value);
-                syncDrawingData(event.message.value);
+                console.log('Received Document update event. New data:', event);
+                console.log(event.message.data);
+                syncDrawingData(event.message.data);
             });
         });
+        // syncClient.document('blackboard')
+        //     .then(function(blackboard) {
+        //         // Listen to updates on the Document
+        //         blackboard.on('messagePublished', function(event) {
+        //             console.log('Received Document update event. New data:', event.data);
+        //             syncDrawingData(event.data);
+        //         });
+
+        //         // Update the Document data
+        //         const newData = { temperature: 23 };
+        //         return blackboard.set(newData);
+        //     })
+        //     .then(function(updateResult) {
+        //         console.log('The Document was successfully updated', updateResult)
+        //     })
+        //     .catch(function(error) {
+        //         console.error('Unexpected error', error)
+        //     });
     });
 
     function syncDrawingData(data) {
@@ -47,11 +69,14 @@ $(function () {
         context.stroke();
         context.closePath();
 
+        // console.log('drawing line ', x0, y0, x1, y1, color);
+
         if (!syncStream) { return; }
         var w = canvas.width;
         var h = canvas.height;
 
         // publish the drawing data to Twilio Sync server
+        console.log('publishing message ');
         syncStream.publishMessage({
             x0: x0 / w,
             y0: y0 / h,
