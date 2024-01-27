@@ -6,3 +6,10 @@ services:
       - 5000:5000
     env_file:
       - .env
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./app/src
+          target: /app
+        - action: rebuild
+          path: /app/requirements.txt
