@@ -1,7 +1,7 @@
 version: '3'
 services:
   backend:
-    build: backend/
+    build: ./app
     ports:
       - 5000:5000
     env_file:

@@ -1,4 +1,5 @@
 import os
+import random
 
 from flask import Flask, request, jsonify, render_template
 from faker import Faker
@@ -25,7 +26,7 @@ logger.info("sync_service_sid: " + SYNC_SERVICE_SID)
 
 app = Flask(__name__)
 fake = Faker()
-
+POST_IT_LIST = ["Start your brainstorm here!"]
 
 @app.route('/')
 def index():
@@ -49,3 +50,51 @@ def generate_token():
     tk = token.to_jwt()
     logger.info("token: " + tk)
     return jsonify(identity=username, token=tk)
+
+@app.route('/addPostIt', methods=['POST'])
+def add_post_it():
+    """
+    Receive the text of the new insertend post-it in the request body
+    and append it to the list of post-its.
+    """
+    post_it_text = request.args.get('post_it_text', "default")
+    POST_IT_LIST.append(post_it_text)
+    logger.info("addPostIt")
+    return jsonify(identity="ok")
+
+@app.route('/getPostItList', methods=['GET'])
+def get_post_it_list():
+    """
+    Return the list of post-its.
+    """
+    logger.info("getPostItList")
+    return jsonify(identity=POST_IT_LIST)
+
+@app.route('/resetPostItList', methods=['POST'])
+def reset_post_it_list():
+    """
+    Reset the list of post-its.
+    """
+    POST_IT_LIST = ["Start your brainstorm here!"]
+    logger.info("resetPostItList")
+    return jsonify(identity="ok")
+
+@app.route('/removePostIt', methods=['POST'])
+def remove_post_it():
+    """
+    Receive the text of the post-it to remove in the request body
+    and remove it from the list of post-its.
+    """
+    post_it_to_delete = request.args.get('post_it_text', "default")
+    POST_IT_LIST = list((POST_IT_LIST).difference(set(post_it_to_delete)))
+    logger.info("removePostIt")
+    return jsonify(identity="ok")
+
+@app.route('/getNewIdea', methods=['GET'])
+def get_new_idea():
+    """
+    Return a new idea. From the LLM model.
+    """
+    logger.info("getNewIdea")
+    idea = random.choice(['Bisogna fare brainstorming', "Questa è una idea", "Questa è un'altra idea"])
+    return jsonify(identity=idea)

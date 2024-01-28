@@ -7,9 +7,9 @@
     <title>🧠 Brainstorm.AI</title>
     <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css">
     <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
+
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     
-    <!-- <link rel="shortcut icon" href="//www.twilio.com/marketing/bundles/marketing/img/favicons/favicon.ico"> -->
 </head>
 
 <body>
@@ -18,22 +18,13 @@
         <p id="message">Initializing Sync...</p>
         <p>Open this page in a few tabs to test!</p >
     </div>
-    <div id="page" class="whiteboard" py-click="print_ciao">
+    <div id="page" class="whiteboard" py-click="manageUserClick">
 
     </div>
-    <!-- <div class="buttons">
-        <button id="color-btn" class="btn">Change Color</button>
-        <button id="clear-btn" class="btn">Clear</button>
-    </div> -->
-    <!-- <canvas class="whiteboard"></canvas> -->
-    <!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script> -->
-    <!-- <script src="https://sdk.twilio.com/js/sync/releases/3.0.1/twilio-sync.min.js"></script> -->
-    <!-- <script src="https://media.twiliocdn.com/sdk/js/sync/releases/0.12.4/twilio-sync.min.js"></script> -->
-    <!-- <script src="{{ url_for('static', filename='main.js') }}"></script> -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://sdk.twilio.com/js/sync/releases/3.0.1/twilio-sync.min.js"></script>
+    <script src="{{ url_for('static', filename='main.js') }}"></script>
     <script type="py" src="{{ url_for('static', filename='main.py')}}" config="{{ url_for('static', filename='pyscript.json')}}"></script>
-    <div id="terminal">
-        <script id="console" type="py" terminal></script>
-    </div>
 </body>
 
 </html>
