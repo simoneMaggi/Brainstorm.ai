@@ -8,8 +8,11 @@ services:
       - .env
     develop:
       watch:
-        - action: sync+restart
+        - action: sync
           path: ./app/src
           target: /app
+        - action: sync+restart
+          path: ./app/src/entrypoint.py
+          target: /app/src/entrypoint.py
         - action: rebuild
           path: ./app/requirements.txt
