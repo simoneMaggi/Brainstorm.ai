@@ -18,9 +18,14 @@
         <p id="message">Initializing Sync...</p>
         <p>Open this page in a few tabs to test!</p >
     </div>
-    <div id="page" class="whiteboard" py-click="manageUserClick">
 
+    <div class="idea" py-click="getNewIdea">
+        <p>Click to get a new idea!</p>
+        <img src="{{ url_for('static', filename='assets/idea.jpg') }}" alt="Click Me" class='idea' id='idea'>
     </div>
+
+    <div id="page" class="whiteboard" py-click="manageUserClick" ></div>
+    
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
     <script src="https://sdk.twilio.com/js/sync/releases/3.0.1/twilio-sync.min.js"></script>
     <script src="{{ url_for('static', filename='main.js') }}"></script>

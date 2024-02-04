@@ -2,58 +2,84 @@ import random
 from pyscript  import document, window
 import json
 import js
-# import requests
+import time
 
 
+"""
+STATE-MACHINE:
+state = (EditingPostIt, FinishedEditingPostIt, ClickedOnPostIt) = (False, False, False) = (E, F, C)
+S0: At time t0, the user clicks on the whiteboard. The state becames (E, F, C) = (True, False, False) = S1
+S1: The user now is editing a post-it. The state changes only if the user clicks on another post-it or on the whiteboard. 
+
+
+"""
 POST_IT_MAP = {}
 EDITING_POST_IT = False
-FINISHED_EDITING_POSTIT = False
+CLICKED_ON_POSTIT = False
 
 def manageUserClick(event):
     global EDITING_POST_IT
-    global FINISHED_EDITING_POSTIT
-    window.console.log(str(event) + "\n" + str(event.clientX) + "\n" + str(event.clientY) 
-                 + "\n you are editing a postit " + str(EDITING_POST_IT)
-                 )
-    if FINISHED_EDITING_POSTIT:
-        FINISHED_EDITING_POSTIT = False
-        EDITING_POST_IT = False
-        return
-    if not EDITING_POST_IT:
-        EDITING_POST_IT = True
+    global CLICKED_ON_POSTIT
+
+    if not CLICKED_ON_POSTIT and not EDITING_POST_IT:
+        window.console.log("you are clicking on the withboard in order to create a new postit")
+        EDITING_POST_IT = True # now you are editing a postit
+        CLICKED_ON_POSTIT = False
         createPostIt(event)
+    elif not CLICKED_ON_POSTIT and EDITING_POST_IT:
+        window.console.log("you are clicking on the whiteboard in order to finish editing the postit")
+        EDITING_POST_IT = False
+        CLICKED_ON_POSTIT = False
+    elif CLICKED_ON_POSTIT and EDITING_POST_IT:
+        window.console.log("you are clicking on a postit in order to edit it")
+        CLICKED_ON_POSTIT = True
+        EDITING_POST_IT = True
+    CLICKED_ON_POSTIT = False
+
 
 def savePostIt(event):
     global POST_IT_MAP
-    global FINISHED_EDITING_POSTIT
+    global EDITING_POSTIT
+    global CLICKED_ON_POSTIT
+
+    CLICKED_ON_POSTIT = False
+    EDITING_POSTIT = False
+
     post_it = event.target
     post_it_text = post_it.innerText
-    window.console.log(str(event) + "\n" + str(post_it_text))
     post_it_id = post_it.id
     POST_IT_MAP[post_it_id] = post_it_text
-    post_it_state_string = json.dumps(POST_IT_MAP)
-    js.debugPyScript(post_it_state_string)
-    FINISHED_EDITING_POSTIT = True
-    # requests.post("http://localhost:5000/addPostIt", data={"post_it_text": post_it_text})
+    postit_json = json.dumps({"post_it_id": post_it_id, "post_it_text": post_it_text})
+    window.console.log("saving postit id "+ post_it_id + " with text: " + post_it_text)
+    js.updatePostIt(postit_json)
 
-def clearPostItText(event):
-    global POST_IT_MAP
-    post_it = event.target
-    post_it.innerText = ""
-    post_it_id = post_it.id
-    POST_IT_MAP[post_it_id] = ""
-    post_it_state_string = json.dumps(POST_IT_MAP)
-    js.debugPyScript(post_it_state_string)
 
-def clearPostItIfFirstClick(event):
+def editTextInPostIt(event):
     global POST_IT_MAP
+    global EDITING_POST_IT
+    global CLICKED_ON_POSTIT
+
+    CLICKED_ON_POSTIT = True
+    EDITING_POST_IT = True
     post_it = event.target
     post_it_id = post_it.id
+    window.console.log(f"editing post it id: {post_it_id}")
     if post_it_id not in POST_IT_MAP:
+        # firsst click on the postit
         post_it.innerText = ""
         POST_IT_MAP[post_it_id] = ""
-        post_it_state_string = json.dumps(POST_IT_MAP)
-        js.debugPyScript(post_it_state_string)
+
+def deletePostIt(event):
+    global POST_IT_MAP
+    post_it = event.target.parentElement
+    post_it_id = post_it.id
+    window.console.log(f"deleting post it id: {post_it_id}")
+    del POST_IT_MAP[post_it_id]
+    post_it.remove()
+    js.removePostIt(post_it_id)
+
+
+
 
 def createPostIt(event):
     global POST_IT_MAP
@@ -62,9 +88,17 @@ def createPostIt(event):
     post_it.setAttribute("class", "postit")
     post_it.setAttribute("draggable", "true")
     post_it.setAttribute("contenteditable", "true")
-    post_it.setAttribute("id", "postit_" + str(len(POST_IT_MAP)))
+    post_it.setAttribute("id", "postit_" + str(hash(str(random.uniform(0, 100000)))))
     post_it.onblur = savePostIt
-    post_it.onclick = clearPostItIfFirstClick
+    post_it.onclick = editTextInPostIt
+    # the postit has a little button on the top right corner to delete it
+    delete_button = document.createElement("button")
+    delete_button.setAttribute("class", "delete_button")
+    delete_button.onclick = deletePostIt
+    delete_button.innerText = "X"
+    post_it.appendChild(delete_button)
+
+
     # post_it._js.onblur = savePostIt
     post_it.innerText = random.choice(["The best idea in the history of brainstorming", 
                                        "Idea here", "Eureka!", 
@@ -73,13 +107,12 @@ def createPostIt(event):
     post_it.style.top = str(event.clientY) + "px"
     whiteboard.appendChild(post_it)
     window.console.log(f"post it created until now: \n {POST_IT_MAP}")
-    
 
-def print_ciao(event):
-    global POST_IT_MAP
-    page_div = document.querySelector("#page")
-    page_div.innerText = "Ciao " + str(event) + "!"
-    window.alert("Ciao " + str(event) + "!")
-    window.console.log("Ciao " + str(event) + "!")
-    post_it_state_string = json.dumps(POST_IT_MAP)
-    js.debugPyScript(post_it_state_string)
+
+
+def getNewIdea(event):
+    new_postit = js.getNewPostIt()
+    window.console.log(f"received new idea: {new_postit}")
+    event.stopPropagation()
+
+

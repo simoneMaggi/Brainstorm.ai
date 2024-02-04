@@ -5,7 +5,7 @@ from flask import Flask, request, jsonify, render_template
 from faker import Faker
 from twilio.jwt.access_token import AccessToken
 from twilio.jwt.access_token.grants import SyncGrant
-
+import json
 
 import logging
 logging.basicConfig(level=logging.INFO)
@@ -26,7 +26,7 @@ logger.info("sync_service_sid: " + SYNC_SERVICE_SID)
 
 app = Flask(__name__)
 fake = Faker()
-POST_IT_LIST = ["Start your brainstorm here!"]
+POST_IT_LIST = {}
 
 @app.route('/')
 def index():
@@ -51,16 +51,23 @@ def generate_token():
     logger.info("token: " + tk)
     return jsonify(identity=username, token=tk)
 
-@app.route('/addPostIt', methods=['POST'])
+@app.route('/updatePostIT', methods=['POST'])
 def add_post_it():
     """
     Receive the text of the new insertend post-it in the request body
     and append it to the list of post-its.
     """
-    post_it_text = request.args.get('post_it_text', "default")
-    POST_IT_LIST.append(post_it_text)
-    logger.info("addPostIt")
-    return jsonify(identity="ok")
+    try:
+        logger.info("addPostIt")
+        post_it_json = request.json.get('post_it_json', "\{\}")
+        logger.info("post_it_json: " + post_it_json)
+        post_it_json = json.loads(post_it_json)
+        POST_IT_LIST[post_it_json['post_it_id']] = post_it_json['post_it_text'] 
+        logger.info("POST_IT_LIST: " + str(POST_IT_LIST))
+        return jsonify(identity="ok")
+    except:
+        logger.info("addPostIt: error")
+        return jsonify(identity="error"), 400
 
 @app.route('/getPostItList', methods=['GET'])
 def get_post_it_list():
@@ -75,7 +82,7 @@ def reset_post_it_list():
     """
     Reset the list of post-its.
     """
-    POST_IT_LIST = ["Start your brainstorm here!"]
+    POST_IT_LIST.clear()
     logger.info("resetPostItList")
     return jsonify(identity="ok")
 
@@ -85,9 +92,13 @@ def remove_post_it():
     Receive the text of the post-it to remove in the request body
     and remove it from the list of post-its.
     """
-    post_it_to_delete = request.args.get('post_it_text', "default")
-    POST_IT_LIST = list((POST_IT_LIST).difference(set(post_it_to_delete)))
-    logger.info("removePostIt")
+    post_it_to_delete = request.args.get('post_it_id', "err")
+    if post_it_to_delete in POST_IT_LIST:
+        del POST_IT_LIST[post_it_to_delete]
+        logger.info("removePostIt")
+    else:
+        logger.info("removePostIt: post_it not found")
+        return jsonify(identity="error"), 404
     return jsonify(identity="ok")
 
 @app.route('/getNewIdea', methods=['GET'])
@@ -95,6 +106,6 @@ def get_new_idea():
     """
     Return a new idea. From the LLM model.
     """
-    logger.info("getNewIdea")
     idea = random.choice(['Bisogna fare brainstorming', "Questa è una idea", "Questa è un'altra idea"])
-    return jsonify(identity=idea)
+    logger.info("getNewIdea "+ idea)
+    return jsonify(identity='ok', idea=idea)
