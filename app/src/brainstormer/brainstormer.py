@@ -9,8 +9,12 @@ from langchain.prompts import PromptTemplate
 from utils.utils import BRAINSTORM_LOGGER
 
 IDEA_GENERATOR_TEMPLATE = """
-Given all the previous ideas, the generator of ideas will generate a new idea.
-{ideas}
+You are doing brainstorming with other people.
+Given all the previous ideas: {ideas}
+
+Generate a new innovative idea. The new Idea must be in the same language of the previous ideas. The Idea must be expressed in a single sentence.
+New idea:
+
 """
 
 IDEA_CRITIQUE_PROMPT = """
@@ -45,8 +49,9 @@ class Brainstomer():
         candidate_idea = self.idea_generator.run(ideas)
         critique = self.idea_critique.run({"previous_ideas": ideas, "new_idea": candidate_idea})
         BRAINSTORM_LOGGER.info(f"Generated Idea: {candidate_idea}")
-        BRAINSTORM_LOGGER.info(f"Critique: {critique}")
-        if critique == "YES":
+        if str(critique).strip() == "YES":
+            BRAINSTORM_LOGGER.info(f"Approved! Critique: {critique}")
             return candidate_idea
         else:
+            BRAINSTORM_LOGGER.info(f"Not Approved! Critique: {critique}")
             return None
