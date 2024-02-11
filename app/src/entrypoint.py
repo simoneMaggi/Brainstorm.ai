@@ -7,9 +7,10 @@ from twilio.jwt.access_token import AccessToken
 from twilio.jwt.access_token.grants import SyncGrant
 import json
 
-import logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+from brainstormer.brainstormer import Brainstomer
+
+from utils.utils import BRAINSTORM_LOGGER
+
 
 # from dotenv import load_dotenv
 # load_dotenv(os.path.join(os.path.dirname(__file__), '../../.env'))
@@ -19,14 +20,15 @@ API_KEY = os.getenv('TWILIO_API_KEY')
 API_SECRET = os.getenv('TWILIO_API_SECRET')
 SYNC_SERVICE_SID = os.getenv('TWILIO_SYNC_SERVICE_SID')
 
-logger.info("account_sid: " + ACCOUNT_SID)
-logger.info("api_key: " + API_KEY)
-logger.info("api_secret: " + API_SECRET)
-logger.info("sync_service_sid: " + SYNC_SERVICE_SID)
+BRAINSTORM_LOGGER.info("account_sid: " + ACCOUNT_SID)
+BRAINSTORM_LOGGER.info("api_key: " + API_KEY)
+BRAINSTORM_LOGGER.info("api_secret: " + API_SECRET)
+BRAINSTORM_LOGGER.info("sync_service_sid: " + SYNC_SERVICE_SID)
 
 app = Flask(__name__)
 fake = Faker()
 POST_IT_LIST = {}
+IDEA_GENERATOR = Brainstomer()
 
 @app.route('/')
 def index():
@@ -48,7 +50,7 @@ def generate_token():
     sync_grant = SyncGrant(SYNC_SERVICE_SID)
     token.add_grant(sync_grant)
     tk = token.to_jwt()
-    logger.info("token: " + tk)
+    BRAINSTORM_LOGGER.info("token: " + tk)
     return jsonify(identity=username, token=tk)
 
 @app.route('/updatePostIT', methods=['POST'])
@@ -58,15 +60,15 @@ def add_post_it():
     and append it to the list of post-its.
     """
     try:
-        logger.info("addPostIt")
+        BRAINSTORM_LOGGER.info("addPostIt")
         post_it_json = request.json.get('post_it_json', "\{\}")
-        logger.info("post_it_json: " + post_it_json)
+        BRAINSTORM_LOGGER.info("post_it_json: " + post_it_json)
         post_it_json = json.loads(post_it_json)
         POST_IT_LIST[post_it_json['post_it_id']] = post_it_json['post_it_text'] 
-        logger.info("POST_IT_LIST: " + str(POST_IT_LIST))
+        BRAINSTORM_LOGGER.info("POST_IT_LIST: " + str(POST_IT_LIST))
         return jsonify(identity="ok")
     except:
-        logger.info("addPostIt: error")
+        BRAINSTORM_LOGGER.info("addPostIt: error")
         return jsonify(identity="error"), 400
 
 @app.route('/getPostItList', methods=['GET'])
@@ -74,7 +76,7 @@ def get_post_it_list():
     """
     Return the list of post-its.
     """
-    logger.info("getPostItList")
+    BRAINSTORM_LOGGER.info("getPostItList")
     return jsonify(identity=POST_IT_LIST)
 
 @app.route('/resetPostItList', methods=['POST'])
@@ -83,7 +85,7 @@ def reset_post_it_list():
     Reset the list of post-its.
     """
     POST_IT_LIST.clear()
-    logger.info("resetPostItList")
+    BRAINSTORM_LOGGER.info("resetPostItList")
     return jsonify(identity="ok")
 
 @app.route('/removePostIt', methods=['POST'])
@@ -95,9 +97,9 @@ def remove_post_it():
     post_it_to_delete = request.args.get('post_it_id', "err")
     if post_it_to_delete in POST_IT_LIST:
         del POST_IT_LIST[post_it_to_delete]
-        logger.info("removePostIt")
+        BRAINSTORM_LOGGER.info("removePostIt")
     else:
-        logger.info("removePostIt: post_it not found")
+        BRAINSTORM_LOGGER.info("removePostIt: post_it not found")
         return jsonify(identity="error"), 404
     return jsonify(identity="ok")
 
@@ -106,6 +108,14 @@ def get_new_idea():
     """
     Return a new idea. From the LLM model.
     """
-    idea = random.choice(['Bisogna fare brainstorming', "Questa è una idea", "Questa è un'altra idea"])
-    logger.info("getNewIdea "+ idea)
+    global IDEA_GENERATOR
+    
+    ideas_list = POST_IT_LIST.values()
+    try:
+        idea = IDEA_GENERATOR.generate_idea(ideas_list)
+    except:
+        idea = None
+    if idea is None:
+        return jsonify(identity="ok")
+    BRAINSTORM_LOGGER.info("getNewIdea "+ idea)
     return jsonify(identity='ok', idea=idea)

@@ -31,8 +31,17 @@ $(document).ready(function () {
     });
 });
 
+
+var GLOBAL_LIST_OF_POSTIT = new Map();
+
 function updatePostIt(post_it_json_data){
     // send text data to backend endpoint /addPostIt
+    // update the global list of postit
+    // transform from string to json
+    var post_it_json = JSON.parse(post_it_json_data);
+    this.GLOBAL_LIST_OF_POSTIT.set(post_it_json.post_it_id, 
+        post_it_json.post_it_text);
+
     $.ajax({
         type: "POST",
         url: "/updatePostIT",
@@ -49,7 +58,9 @@ function updatePostIt(post_it_json_data){
 }
 
 function removePostIt(post_it_id){
-    // send text data to backend endpoint /addPostIt
+
+    this.GLOBAL_LIST_OF_POSTIT.delete(post_it_id);
+
     $.ajax({
         type: "POST",
         url: "/removePostIT",
@@ -71,10 +82,42 @@ function publishData(data) {
     syncStream.publishMessage(data);
 };
 
-function debugPyScript(data){
-    console.log("the object sent is ", data);
-    console.log("last sync data is ", this.lastSyncData);
-};
+
+
+function addPostIt_UI(idea){
+    var postIt = document.createElement('div');
+    postIt.className = "postit";
+    postIt.draggable = true;
+    postIt.contentEditable = true;
+    // add a button on top to delete the postit
+    var deleteButton = document.createElement('button');
+    deleteButton.innerHTML = "X";
+    deleteButton.className = "deleteButton";
+    deleteButton.onclick = function(event){
+        console.log("delete button clicked");
+        postIt = event.target.parentElement;
+        removePostIt(postIt.id);
+        postIt.remove();
+    };
+    postIt.appendChild(deleteButton);
+
+
+
+    // random UUID
+    postIt.id = "postit_" + Math.floor(Math.random() * 1000000);
+    postIt.innerHTML = idea;
+
+    // put it in a random position on the witheboard
+    postIt.style.left = Math.floor(Math.random() * 500) + "px";
+    postIt.style.top = Math.floor(Math.random() * 500) + "px";
+
+    document.getElementById('page').appendChild(postIt);
+
+    return postIt.id;
+}
+
+
+
 
 
 function getNewPostIt(){
@@ -84,10 +127,21 @@ function getNewPostIt(){
         success: function(data){
             console.log("received new postit from backend", data);
             // publishData(data);
-            return data;
+            if (data.hasOwnProperty('idea'))
+            {
+                var id = addPostIt_UI(data.idea);
+                updatePostIt(JSON.stringify({'post_it_id': id, 'post_it_text': data.idea}));
+            }
         },
         failure: function(errMsg) {
             alert(errMsg);
         }
     });
 }
+
+setInterval(function(){
+    getNewPostIt();
+}, 50000);
+
+
+

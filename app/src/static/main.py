@@ -2,17 +2,9 @@ import random
 from pyscript  import document, window
 import json
 import js
-import time
 
 
-"""
-STATE-MACHINE:
-state = (EditingPostIt, FinishedEditingPostIt, ClickedOnPostIt) = (False, False, False) = (E, F, C)
-S0: At time t0, the user clicks on the whiteboard. The state becames (E, F, C) = (True, False, False) = S1
-S1: The user now is editing a post-it. The state changes only if the user clicks on another post-it or on the whiteboard. 
 
-
-"""
 POST_IT_MAP = {}
 EDITING_POST_IT = False
 CLICKED_ON_POSTIT = False
@@ -107,12 +99,5 @@ def createPostIt(event):
     post_it.style.top = str(event.clientY) + "px"
     whiteboard.appendChild(post_it)
     window.console.log(f"post it created until now: \n {POST_IT_MAP}")
-
-
-
-def getNewIdea(event):
-    new_postit = js.getNewPostIt()
-    window.console.log(f"received new idea: {new_postit}")
-    event.stopPropagation()
 
 
