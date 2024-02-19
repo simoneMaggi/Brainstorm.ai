@@ -1,67 +1,77 @@
-* {
-    box-sizing: border-box;
+
+body{
+	font-family: 'Lucida Grande', 'Helvetica', sans-serif;
+	/* background:url(../images/corkboard.jpg); */
 }
 
-html, body {
-    height: 100%;
-    margin: 0;
-    padding: 0;
-}
-
-.whiteboard {
-    height: 100%;
-    width: 100%;
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    top: 0;
+#newNoteButton{
+	font-size:25px;
+	padding:10px;
+	border-radius:5px;
+	background:#333;
+	color:#fff;
+	border:0;
 }
 
 
-.postit {
-    position: absolute;
-    background-color: #FFFFCC;
-    border: 1px solid #000000;
-    padding: 10px;
-    font-size: 14px;
-    width: 200px;
-    height: 200px;
-    overflow: auto;
-    cursor: move;
+#colorButton{
+	font-size:25px;
+	padding:10px;
+	border-radius:5px;
+	background:#333;
+	color:#fff;
+	border:0;
 }
 
-.delete_button {
-    position: absolute;
-    right: 0;
-    top: 0;
-    cursor: crosshair;
-    font-size: 14px;
-    padding: 5px 10px;
-    background-color: red; 
-    color: black;
-    border: 5px solid #555555;
+#newNoteButton:hover{
+	background:black;
 }
 
-.tips {
-    /* position: fixed; */
-    left: 0;
-    /* top: 0; */
+.note{
+	background-color: yellow;
+	height:250px;
+	width:200px;
+	padding:10px;
+	position:absolute;
+	-webkit-box-shadow:0px 5px 10px rgba(0,0,0,0.5);
+	box-shadow:0px 5px 10px rgba(0,0,0,0.5);
 }
 
-.buttons {
-    position: fixed;
-    right: 10px;
-    top: 10px;
-    z-index: 1;  /* make the button on top of the whiteboard */
+.note:hover .closebutton{
+	display:block;
 }
 
-.btn {
-    font-size: 14px;
-    padding: 5px 10px;
-    text-decoration: none;
-    cursor: pointer;
-    background-color: white;
-    color: black;
-    border: 5px solid #555555;
+.closebutton{
+	display:none;
+	background-image:url(assets/remove.png);
+	height:30px;
+	width:30px;
+	position:absolute;
+	left:-15px;
+	top:-15px;
+}
+
+.closebutton:active{
+	background-image:url(assets/remove_pushed.png);
+}
+
+.timestamp{
+	position:absolute;
+	left:0;
+	right:0;
+	bottom:0;
+	font-size:11px;
+	background-color:#db0;
+	color:#000;
+	border-top:1px solid #a80;
+	padding:2px 4px;
+	text-align:center;
+	
+}
+
+[contenteditable="true"]:active,
+[contenteditable="true"]:focus{
+  border: 1px solid black;
+  outline:1px solid blue;
+  height: 230px;
 }
