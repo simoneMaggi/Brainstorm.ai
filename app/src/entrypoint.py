@@ -15,10 +15,10 @@ from utils.utils import BRAINSTORM_LOGGER
 # from dotenv import load_dotenv
 # load_dotenv(os.path.join(os.path.dirname(__file__), '../../.env'))
 # get credentials from environment variables
-ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID')
-API_KEY = os.getenv('TWILIO_API_KEY')
-API_SECRET = os.getenv('TWILIO_API_SECRET')
-SYNC_SERVICE_SID = os.getenv('TWILIO_SYNC_SERVICE_SID')
+ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID', 'xxxxxxx')
+API_KEY = os.getenv('TWILIO_API_KEY', 'xxxxxxx')
+API_SECRET = os.getenv('TWILIO_API_SECRET', 'xxxxxxx')
+SYNC_SERVICE_SID = os.getenv('TWILIO_SYNC_SERVICE_SID', 'xxxxxxx')
 
 BRAINSTORM_LOGGER.info("account_sid: " + ACCOUNT_SID)
 BRAINSTORM_LOGGER.info("api_key: " + API_KEY)
@@ -94,12 +94,13 @@ def remove_post_it():
     Receive the text of the post-it to remove in the request body
     and remove it from the list of post-its.
     """
-    post_it_to_delete = request.args.get('post_it_id', "err")
+    post_it_to_delete = request.json.get('post_it_id', "err")
+    BRAINSTORM_LOGGER.info("post_it_to_delete: " + post_it_to_delete)
     if post_it_to_delete in POST_IT_LIST:
         del POST_IT_LIST[post_it_to_delete]
-        BRAINSTORM_LOGGER.info("removePostIt")
+        BRAINSTORM_LOGGER.info("removed correctly the PostIt")
     else:
-        BRAINSTORM_LOGGER.info("removePostIt: post_it not found")
+        BRAINSTORM_LOGGER.info("post_it not found")
         return jsonify(identity="error"), 404
     return jsonify(identity="ok")
 
