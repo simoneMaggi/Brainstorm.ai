@@ -1,33 +1,25 @@
+from dataclasses import dataclass
 import os
 import random
-
+from typing import Dict
+import threading
+import time
 from flask import Flask, request, jsonify, render_template
-from faker import Faker
-from twilio.jwt.access_token import AccessToken
-from twilio.jwt.access_token.grants import SyncGrant
 import json
 
 from brainstormer.brainstormer import Brainstomer
 
 from utils.utils import BRAINSTORM_LOGGER
 
-
-# from dotenv import load_dotenv
-# load_dotenv(os.path.join(os.path.dirname(__file__), '../../.env'))
-# get credentials from environment variables
-ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID')
-API_KEY = os.getenv('TWILIO_API_KEY')
-API_SECRET = os.getenv('TWILIO_API_SECRET')
-SYNC_SERVICE_SID = os.getenv('TWILIO_SYNC_SERVICE_SID')
-
-BRAINSTORM_LOGGER.info("account_sid: " + ACCOUNT_SID)
-BRAINSTORM_LOGGER.info("api_key: " + API_KEY)
-BRAINSTORM_LOGGER.info("api_secret: " + API_SECRET)
-BRAINSTORM_LOGGER.info("sync_service_sid: " + SYNC_SERVICE_SID)
+@dataclass
+class PostIt:
+    post_it_id: str
+    post_it_text: str
+    post_it_left: int
+    post_it_top: int
 
 app = Flask(__name__)
-fake = Faker()
-POST_IT_LIST = {}
+POST_IT_LIST : Dict[str, PostIt] = {}
 IDEA_GENERATOR = Brainstomer()
 
 @app.route('/')
@@ -38,22 +30,7 @@ def index():
 def ready():
     return "I am ready"
 
-
-@app.route('/token')
-def generate_token():
-
-    username = request.args.get('username', fake.user_name())
-
-    # create access token with credentials
-    token = AccessToken(ACCOUNT_SID, API_KEY, API_SECRET, identity=username)
-    # create a Sync grant and add to token
-    sync_grant = SyncGrant(SYNC_SERVICE_SID)
-    token.add_grant(sync_grant)
-    tk = token.to_jwt()
-    BRAINSTORM_LOGGER.info("token: " + tk)
-    return jsonify(identity=username, token=tk)
-
-@app.route('/updatePostIT', methods=['POST'])
+@app.route('/updatePostIt', methods=['POST'])
 def add_post_it():
     """
     Receive the text of the new insertend post-it in the request body
@@ -61,14 +38,20 @@ def add_post_it():
     """
     try:
         BRAINSTORM_LOGGER.info("addPostIt")
-        post_it_json = request.json.get('post_it_json', "\{\}")
-        BRAINSTORM_LOGGER.info("post_it_json: " + post_it_json)
-        post_it_json = json.loads(post_it_json)
-        POST_IT_LIST[post_it_json['post_it_id']] = post_it_json['post_it_text'] 
+        BRAINSTORM_LOGGER.info("post_it_json: " + str(request.json))
+
+        POST_IT_LIST[request.json['post_it_id']] = PostIt(
+            post_it_id=request.json['post_it_id'],
+            post_it_text=request.json['post_it_text'],
+            post_it_left=request.json['post_it_left'],
+            post_it_top=request.json['post_it_top']
+        )
+
         BRAINSTORM_LOGGER.info("POST_IT_LIST: " + str(POST_IT_LIST))
         return jsonify(identity="ok")
-    except:
-        BRAINSTORM_LOGGER.info("addPostIt: error")
+    except Exception as e:
+        BRAINSTORM_LOGGER.info(f"addPostIt: {e}")
+        
         return jsonify(identity="error"), 400
 
 @app.route('/getPostItList', methods=['GET'])
@@ -76,8 +59,9 @@ def get_post_it_list():
     """
     Return the list of post-its.
     """
-    BRAINSTORM_LOGGER.info("getPostItList")
-    return jsonify(identity=POST_IT_LIST)
+    BRAINSTORM_LOGGER.debug(f"getPostItList: \n {POST_IT_LIST}")
+    postit_list_json = json.dumps({post_it.post_it_id: post_it.__dict__ for post_it in POST_IT_LIST.values()})
+    return postit_list_json
 
 @app.route('/resetPostItList', methods=['POST'])
 def reset_post_it_list():
@@ -103,19 +87,24 @@ def remove_post_it():
         return jsonify(identity="error"), 404
     return jsonify(identity="ok")
 
-@app.route('/getNewIdea', methods=['GET'])
-def get_new_idea():
-    """
-    Return a new idea. From the LLM model.
-    """
-    global IDEA_GENERATOR
+
+if __name__ == '__main__':
+    def create_idea(idea_generator: Brainstomer, post_it_list: Dict[str, PostIt]):
+        while True:
+            ideas = [post_it.post_it_text for post_it in post_it_list.values()]
+            idea = idea_generator.generate_idea(ideas)
+            if idea:
+                posit_id = random.randint(0, 100000000)
+                post_it_list[posit_id] = PostIt(
+                    post_it_id=str(posit_id),
+                    post_it_text=idea,
+                    post_it_left=random.randint(0, 400),
+                    post_it_top=random.randint(0, 400)
+                )
+            time.sleep(3000)
     
-    ideas_list = POST_IT_LIST.values()
-    try:
-        idea = IDEA_GENERATOR.generate_idea(ideas_list)
-    except:
-        idea = None
-    if idea is None:
-        return jsonify(identity="ok")
-    BRAINSTORM_LOGGER.info("getNewIdea "+ idea)
-    return jsonify(identity='ok', idea=idea)
+
+    threading.Thread(target=create_idea, args = [IDEA_GENERATOR, POST_IT_LIST]).start()
+
+    BRAINSTORM_LOGGER.info("Thread brainstormer started")
+    app.run(host='0.0.0.0', port=5000)

@@ -1,1 +1,0 @@
-flask --app=backend/app/entrypoint.py run 

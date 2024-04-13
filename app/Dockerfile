@@ -13,11 +13,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the Flask app code to the container
 COPY src/ .
 
-# Set the environment variable for Flask
-ENV FLASK_APP=entrypoint.py
 
 # Expose the port on which the Flask app will run
 EXPOSE 5000
 
 # Run the Flask app
-CMD ["flask", "run", "--host=0.0.0.0"]
+CMD ["python", "entrypoint.py"]

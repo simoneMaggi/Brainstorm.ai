@@ -1,133 +1,39 @@
 // NEW CODE https://github.com/MaceTenth/StickyNotes/tree/master
 
-var syncStream;
-$(document).ready(function () {
-    var syncClient;
-    var lastSyncData = null;
-    var message = $('#message');
-    $.getJSON('/token', function(tokenResponse) {
-        console.log(tokenResponse.token);
-        syncClient = new Twilio.Sync.Client(tokenResponse.token);
-        
-        syncClient.on('connectionStateChanged', function(state) {
-            if (state != 'connected') {
-                message.html('Sync is not live (websocket connection <span style="color: red">' + state + '</span>)…');
-            } else {
-                message.html('Sync is live!');
-            }
-        });
+var UPDATE_RATE = 2000;
 
-        // create the stream object
-        syncClient.stream('sendData').then(function(stream) {
-            console.log('stream created');
-            syncStream = stream;
-            // listen update and sync drawing data
-            syncStream.on('messagePublished', function(event) {
-                console.log('Received Document update event. New data:', event);
-                console.log(event.message.data);
-                this.lastSyncData = event.message.data;
-            });
-        });
-    });
-});
+var GLOBAL_LIST_OF_POSTIT = new Map();
 
+var captured = null;
 
-let GLOBAL_LIST_OF_POSTIT = new Map();
-
-function updatePostIt(post_it_json_data){
-    // send text data to backend endpoint /addPostIt
-    // update the global list of postit
-    // transform from string to json
-    var post_it_json = JSON.parse(post_it_json_data);
-    this.GLOBAL_LIST_OF_POSTIT.set(post_it_json.post_it_id, 
-        post_it_json.post_it_text);
-        
-        $.ajax({
-            type: "POST",
-        url: "/updatePostIT",
-        data: JSON.stringify({'post_it_json': post_it_json_data}),
-        contentType: "application/json; charset=utf-8",
-        dataType: "json",
-        success: function(data){
-            console.log("sent new postit to backend", data);
-        },
-        failure: function(errMsg) {
-            alert(errMsg);
-        }
-    });
-}
-
-function removePostIt(post_it_id){
-
-    this.GLOBAL_LIST_OF_POSTIT.delete(post_it_id);
-
-    $.ajax({
-        type: "POST",
-        url: "/removePostIT",
-        data: JSON.stringify({'post_it_id': post_it_id}),
-        contentType: "application/json; charset=utf-8",
-        dataType: "json",
-        success: function(data){
-            console.log("sent new postit to backend", data);
-        },
-        failure: function(errMsg) {
-            alert(errMsg);
-        }
-    });
-}
-
-function publishData(data) {
-    console.log("the object sent is ", data);
-    console.log("last sync data is ", this.lastSyncData);
-    syncStream.publishMessage(data);
-};
-
-
-
-function addPostIt_UI(idea){
-    var postIt = document.createElement('div');
-    postIt.className = "postit";
-    postIt.draggable = true;
-    postIt.contentEditable = true;
-    // add a button on top to delete the postit
-    var deleteButton = document.createElement('button');
-    deleteButton.innerHTML = "X";
-    deleteButton.className = "delete_button";
-    deleteButton.onclick = function(event){
-        console.log("delete button clicked");
-        postIt = event.target.parentElement;
-        removePostIt(postIt.id);
-        postIt.remove();
-    };
-    postIt.appendChild(deleteButton);
-
-
-
-    // random UUID
-    postIt.id = "postit_" + Math.floor(Math.random() * 1000000);
-    postIt.innerHTML = idea;
-
-    // put it in a random position on the witheboard
-    postIt.style.left = Math.floor(Math.random() * 500) + "px";
-    postIt.style.top = Math.floor(Math.random() * 500) + "px";
-
-    document.getElementById('page').appendChild(postIt);
-
-    return postIt.id;
-}
-
-
-function getNewPostIt(){
+function syncBackend(){
     $.ajax({
         type: "GET",
-        url: "/getNewIdea",
+        url: "/getPostItList",
         success: function(data){
             console.log("received new postit from backend", data);
-            // publishData(data);
-            if (data.hasOwnProperty('idea'))
-            {
-                var id = addPostIt_UI(data.idea);
-                updatePostIt(JSON.stringify({'post_it_id': id, 'post_it_text': data.idea}));
+            parsed = JSON.parse(data)
+            
+            for (postit in parsed){
+                analized_postit = parsed[postit];
+                console.log("analizeing postit", analized_postit);
+                captured_id = captured ? captured._id : null;
+                console.log("captured", captured_id);
+                if(GLOBAL_LIST_OF_POSTIT.has(postit) && captured_id != postit){
+                    console.log("updating postit", postit);
+                    var note = GLOBAL_LIST_OF_POSTIT.get(postit);
+                    note.text = analized_postit.post_it_text;
+                    note.left = Math.round(analized_postit.post_it_left) + 'px';
+                    note.top = Math.round(analized_postit.post_it_top) + 'px';
+                }
+                else if(!GLOBAL_LIST_OF_POSTIT.has(postit)){
+                    console.log("creating new postit", postit);
+                    var note = new Note();
+                    note.id = analized_postit.post_it_id;
+                    note.left = Math.round(analized_postit.post_it_left) + 'px';
+                    note.top = Math.round(analized_postit.post_it_top) + 'px';
+                    GLOBAL_LIST_OF_POSTIT.set(note.id, note);
+                }
             }
         },
         failure: function(errMsg) {
@@ -137,11 +43,55 @@ function getNewPostIt(){
 }
 
 setInterval(function(){
-    getNewPostIt();
-}, 50000);
+    syncBackend();
+}, UPDATE_RATE);
+
+function updatePostIt(postit){
+    body = JSON.stringify({
+        'post_it_id': postit.id,
+        'post_it_text': postit.text,
+        'post_it_left': postit.left,
+        'post_it_top': postit.top
+    });
+    console.log("sending postit to backend", body);
+
+    $.ajax({
+        type: "POST",
+        url: "/updatePostIt",
+        data: body,
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function(data){
+            console.log("postit saved", data);
+        },
+        failure: function(errMsg) {
+            alert(errMsg);
+        }
+    });
+}
 
 
-var captured = null;
+function removePostIt(postit){
+    
+    body = JSON.stringify({
+        'post_it_id': postit.id
+    })
+
+    $.ajax({
+        type: "POST",
+        url: "/removePostIt",
+        data: body,
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function(data){
+            console.log("postit deleted", data);
+        },
+        failure: function(errMsg) {
+            alert(errMsg);
+        }
+    });
+}
+
 
 function Note(){
     console.log("creating new note");
@@ -155,23 +105,22 @@ function Note(){
     note.addEventListener('click', function() { return self.onNoteClick() }, false);
     
     this.note = note;
-
+    
     var close = document.createElement('div');
     close.className = 'closebutton';
     close.addEventListener('click', function(event) { return self.close(event) }, false);
     note.appendChild(close);
-
+    
     var edit = document.createElement('div');
     edit.className = 'edit';
     edit.setAttribute('contenteditable', true);
+    edit.addEventListener('blur', function() { return self.onBlur() }, false);
     edit.addEventListener('keyup', function() { return self.onKeyUp() }, false);
     note.appendChild(edit);
     this.editField = edit;
 
-    document.body.appendChild(note);
-    // this.GLOBAL_LIST_OF_POSTIT.set(this.id, this.text);
-    // this.GLOBAL_LIST_OF_POSTIT.set(this.id, this.text);
 
+    document.body.appendChild(note);
     return this;
 }
 
@@ -224,12 +173,13 @@ Note.prototype = {
         GLOBAL_LIST_OF_POSTIT.delete(note.id);
         console.log("removing postit with id ", this.id);
         document.body.removeChild(this.note);
+        removePostIt(note);
     },
 
     saveSoon: function(){
         this.cancelPendingSave();
         var self = this;
-        this._saveTimer = setTimeout(function() { self.save() }, 200);
+        this._saveTimer = setTimeout(function() { self.save() }, 1000);
     },
 
     cancelPendingSave: function(){
@@ -249,7 +199,7 @@ Note.prototype = {
         }
 
         var note = this;
-        
+        updatePostIt(note);
     },
 
     onMouseDown: function(e){
@@ -297,6 +247,12 @@ Note.prototype = {
         this.dirty = true;
         this.saveSoon();
     },
+
+
+    onBlur: function(e){
+        console.log("focus out");
+        captured = null;
+    }
 }
 
 function newNote(){
@@ -304,7 +260,7 @@ function newNote(){
     note.id = "postit_" + Math.floor(Math.random() * 1000000);
     note.left = Math.round(Math.random() * 400) + 'px';
     note.top = Math.round(Math.random() * 500) + 'px';
-   
+    GLOBAL_LIST_OF_POSTIT.set(note.id, note);
 }
 
    
