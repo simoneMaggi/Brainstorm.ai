@@ -95,9 +95,9 @@ function removePostIt(postit){
 
 function Note(){
     console.log("creating new note");
-
+    
     var self = this;
-
+    
     var note = document.createElement('div');
     
     note.className = 'note';
@@ -110,6 +110,7 @@ function Note(){
     close.className = 'closebutton';
     close.addEventListener('click', function(event) { return self.close(event) }, false);
     note.appendChild(close);
+    
     
     var edit = document.createElement('div');
     edit.className = 'edit';
@@ -127,67 +128,68 @@ function Note(){
 Note.prototype = {
     get id(){
         if (!("_id" in this))
-            this._id = 0;
-        return this._id;
-    },
+        this._id = 0;
+    return this._id;
+},
 
-    set id(x){
-        this._id = x;
-    },
+set id(x){
+    this._id = x;
+},
 
-    get text(){
-        return this.editField.innerHTML;
-    },
+get text(){
+    return this.editField.innerHTML;
+},
 
-    set text(x){
-        this.editField.innerHTML = x;
-    },
+set text(x){
+    this.editField.innerHTML = x;
+},
 
-    get left(){
-        return this.note.style.left;
-    },
+get left(){
+    return this.note.style.left;
+},
 
-    set left(x){
-        this.note.style.left = x;
-    },
+set left(x){
+    this.note.style.left = x;
+},
 
-    get top(){
-        return this.note.style.top;
+get top(){
+    return this.note.style.top;
     },
-
+    
     set top(x){
         this.note.style.top = x;
     },
-
+    
     get zIndex(){
         return this.note.style.zIndex;
     },
-
+    
     set zIndex(x){
         this.note.style.zIndex = x;
     },
-
+    
     close: function(event){
         this.cancelPendingSave();
         var note = this;
-        GLOBAL_LIST_OF_POSTIT.delete(note.id);
         console.log("removing postit with id ", this.id);
+        removeNote(this.id);
         document.body.removeChild(this.note);
         removePostIt(note);
     },
-
+    
     saveSoon: function(){
         this.cancelPendingSave();
         var self = this;
         this._saveTimer = setTimeout(function() { self.save() }, 1000);
+        this._saveTimer = setTimeout(function() { self.save() }, 1000);
     },
-
+    
     cancelPendingSave: function(){
         if (!("_saveTimer" in this))
-            return;
-        clearTimeout(this._saveTimer);
-        delete this._saveTimer;
-    },
+        return;
+    clearTimeout(this._saveTimer);
+    delete this._saveTimer;
+},
 
     save: function(){
         console.log("saving note", this);
@@ -202,45 +204,45 @@ Note.prototype = {
         updatePostIt(note);
     },
 
-    onMouseDown: function(e){
-        console.log("mouse down");
-        captured = this;
-        this.startX = e.clientX - this.note.offsetLeft;
-        this.startY = e.clientY - this.note.offsetTop;
+onMouseDown: function(e){
+    console.log("mouse down");
+    captured = this;
+    this.startX = e.clientX - this.note.offsetLeft;
+    this.startY = e.clientY - this.note.offsetTop;
+    
+    var self = this;
+    if (!("mouseMoveHandler" in this)) {
+        this.mouseMoveHandler = function(e) { return self.onMouseMove(e) }
+        this.mouseUpHandler = function(e) { return self.onMouseUp(e) }
+    }
+    
+    document.addEventListener('mousemove', this.mouseMoveHandler, true);
+    document.addEventListener('mouseup', this.mouseUpHandler, true);
+    
+    return false;
+},
 
-        var self = this;
-        if (!("mouseMoveHandler" in this)) {
-            this.mouseMoveHandler = function(e) { return self.onMouseMove(e) }
-            this.mouseUpHandler = function(e) { return self.onMouseUp(e) }
-        }
+onMouseMove: function(e){
+    if (this != captured)
+    return true;
 
-        document.addEventListener('mousemove', this.mouseMoveHandler, true);
-        document.addEventListener('mouseup', this.mouseUpHandler, true);
+this.left = e.clientX - this.startX + 'px';
+this.top = e.clientY - this.startY + 'px';
+return false;
+},
 
-        return false;
-    },
+onMouseUp: function(e){
+    document.removeEventListener('mousemove', this.mouseMoveHandler, true);
+    document.removeEventListener('mouseup', this.mouseUpHandler, true);
+    
+    this.save();
+    return false;
+},
 
-    onMouseMove: function(e){
-        if (this != captured)
-            return true;
-
-        this.left = e.clientX - this.startX + 'px';
-        this.top = e.clientY - this.startY + 'px';
-        return false;
-    },
-
-    onMouseUp: function(e){
-        document.removeEventListener('mousemove', this.mouseMoveHandler, true);
-        document.removeEventListener('mouseup', this.mouseUpHandler, true);
-
-        this.save();
-        return false;
-    },
-
-    onNoteClick: function(e){
-        this.editField.focus();
-        getSelection().collapseToEnd();
-    },
+onNoteClick: function(e){
+    this.editField.focus();
+    getSelection().collapseToEnd();
+},
 
     onKeyUp: function(){
         console.log("key up");
@@ -255,7 +257,7 @@ Note.prototype = {
     }
 }
 
-function newNote(){
+function newNote(text = ""){
     var note = new Note();
     note.id = "postit_" + Math.floor(Math.random() * 1000000);
     note.left = Math.round(Math.random() * 400) + 'px';
@@ -263,5 +265,5 @@ function newNote(){
     GLOBAL_LIST_OF_POSTIT.set(note.id, note);
 }
 
-   
+
    
