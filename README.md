@@ -9,7 +9,7 @@ This is a collaborative brainstorming board, where people can share different id
  
 
 
-## Start the brainstorm now
+## Start to brainstorm now
 Add the openai key in the env.template file, and rename It as .env.
 
 Then simply run 
